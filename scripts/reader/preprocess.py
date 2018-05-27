@@ -34,6 +34,7 @@ def tokenize(text):
     """Call the global process tokenizer on the input text."""
     global TOK
     tokens = TOK.tokenize(text)
+    print(text)
     output = {
         'words': tokens.words(),
         'offsets': tokens.offsets(),
@@ -85,6 +86,8 @@ def process_dataset(data, tokenizer, workers=None):
     q_tokens = workers.map(tokenize, data['questions'])
     workers.close()
     workers.join()
+    #init(tokenizer_class, {'annotators': {'lemma'}})
+    #q_tokens = [tokenize(s) for s in data['questions']]
 
     workers = make_pool(
         initargs=(tokenizer_class, {'annotators': {'lemma', 'pos', 'ner'}})

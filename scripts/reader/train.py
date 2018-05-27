@@ -320,8 +320,8 @@ def eval_accuracies(pred_s, target_s, pred_e, target_e):
     """
     # Convert 1D tensors to lists of lists (compatibility)
     if torch.is_tensor(target_s):
-        target_s = [[e] for e in target_s]
-        target_e = [[e] for e in target_e]
+        target_s = [[e.item()] for e in target_s]
+        target_e = [[e.item()] for e in target_e]
 
     # Compute accuracies from targets
     batch_size = len(pred_s)
@@ -343,7 +343,8 @@ def eval_accuracies(pred_s, target_s, pred_e, target_e):
 
         # Both start and end match
         if any([1 for _s, _e in zip(target_s[i], target_e[i])
-                if _s == pred_s[i] and _e == pred_e[i]]):
+                if _s == np.asscalar(pred_s[i]) and
+                _e == np.asscalar(pred_e[i])]):
             em.update(1)
         else:
             em.update(0)
