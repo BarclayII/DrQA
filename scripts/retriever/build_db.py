@@ -63,23 +63,36 @@ def iter_files(path):
     else:
         raise RuntimeError('Path %s is invalid' % path)
 
+#def get_contents(filename):
+#    """Parse the contents of a file. Each line is a JSON encoded document."""
+#    global PREPROCESS_FN
+#    documents = []
+#    with open(filename) as f:
+#        for line in f:
+#            # Parse document
+#            doc = json.loads(line)
+#            # Maybe preprocess the document with custom function
+#            if PREPROCESS_FN:
+#                doc = PREPROCESS_FN(doc)
+#            # Skip if it is empty or None
+#            if not doc:
+#                continue
+#            # Add the document
+#            documents.append((utils.normalize(doc['id']), doc['text']))
+#    return documents
 
 def get_contents(filename):
-    """Parse the contents of a file. Each line is a JSON encoded document."""
-    global PREPROCESS_FN
     documents = []
+
     with open(filename) as f:
-        for line in f:
-            # Parse document
-            doc = json.loads(line)
-            # Maybe preprocess the document with custom function
-            if PREPROCESS_FN:
-                doc = PREPROCESS_FN(doc)
-            # Skip if it is empty or None
-            if not doc:
-                continue
-            # Add the document
-            documents.append((utils.normalize(doc['id']), doc['text']))
+        content = json.load(f)
+        for key, passages in content.items():
+            for i, p in enumerate(passages):
+                documents.append((
+                    key + '-' + str(i),
+                    '\n\n'.join(p)
+                    ))
+
     return documents
 
 

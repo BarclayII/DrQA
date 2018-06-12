@@ -89,7 +89,7 @@ def get_count_matrix(args, db, db_opts):
     M[i, j] = # times word i appears in document j.
     """
     # Map doc_ids to indexes
-    global DOC2IDX
+    global DOC2IDX, filename
     db_class = retriever.get_class(db)
     with db_class(**db_opts) as doc_db:
         doc_ids = doc_db.get_doc_ids()
@@ -106,7 +106,7 @@ def get_count_matrix(args, db, db_opts):
     # Compute the count matrix in steps (to keep in memory)
     logger.info('Mapping...')
     row, col, data = [], [], []
-    step = max(int(len(doc_ids) / 10), 1)
+    step = max(int(len(doc_ids) / 1000), 1)
     batches = [doc_ids[i:i + step] for i in range(0, len(doc_ids), step)]
     _count = partial(count, args.ngram, args.hash_size)
     for i, batch in enumerate(batches):
@@ -115,14 +115,26 @@ def get_count_matrix(args, db, db_opts):
             row.extend(b_row)
             col.extend(b_col)
             data.extend(b_data)
+        logger.info('Saving...')
+        current_count_matrix = sp.csr_matrix(
+            (data, (row, col)), shape=(args.hash_size, len(doc_ids))
+        )
+        current_count_matrix.sum_duplicates()
+        retriever.utils.save_sparse_csr(filename + '.' + str(i), current_count_matrix)
+        row.clear()
+        col.clear()
+        data.clear()
+
     workers.close()
     workers.join()
 
     logger.info('Creating sparse matrix...')
-    count_matrix = sp.csr_matrix(
-        (data, (row, col)), shape=(args.hash_size, len(doc_ids))
-    )
-    count_matrix.sum_duplicates()
+    count_matrix = sp.csr_matrix((args.hash_size, len(doc_ids)))
+    for i in range(len(batches)):
+        logger.info('-' * 25 + 'Batch %d/%d' % (i + 1, len(batches)) + '-' * 25)
+        current_count_matrix, _ = retriever.utils.load_sparse_csr(filename + '.' + str(i) + '.npz')
+        count_matrix += current_count_matrix
+
     return count_matrix, (DOC2IDX, doc_ids)
 
 
@@ -178,6 +190,11 @@ if __name__ == '__main__':
                         help='Number of CPU processes (for tokenizing, etc)')
     args = parser.parse_args()
 
+    basename = os.path.splitext(os.path.basename(args.db_path))[0]
+    basename += ('-tfidf-ngram=%d-hash=%d-tokenizer=%s' %
+                 (args.ngram, args.hash_size, args.tokenizer))
+    filename = os.path.join(args.out_dir, basename)
+
     logging.info('Counting words...')
     count_matrix, doc_dict = get_count_matrix(
         args, 'sqlite', {'db_path': args.db_path}
@@ -188,11 +205,6 @@ if __name__ == '__main__':
 
     logger.info('Getting word-doc frequencies...')
     freqs = get_doc_freqs(count_matrix)
-
-    basename = os.path.splitext(os.path.basename(args.db_path))[0]
-    basename += ('-tfidf-ngram=%d-hash=%d-tokenizer=%s' %
-                 (args.ngram, args.hash_size, args.tokenizer))
-    filename = os.path.join(args.out_dir, basename)
 
     logger.info('Saving to %s.npz' % filename)
     metadata = {
