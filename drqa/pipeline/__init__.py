@@ -7,7 +7,7 @@
 
 import os
 from ..tokenizers import CoreNLPTokenizer
-from ..retriever import TfidfDocRanker
+from ..retriever import TfidfDocRanker, SparseTfidfDocRanker
 from ..retriever import DocDB
 from .. import DATA_DIR
 

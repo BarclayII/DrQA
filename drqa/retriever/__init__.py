@@ -25,10 +25,18 @@ def set_default(key, value):
 def get_class(name):
     if name == 'tfidf':
         return TfidfDocRanker
+    if name == 'sparse':
+        return SparseTfidfDocRanker
+    if name == 'fhash':
+        return FeatureHashingTfidfDocRanker
+    if name == 'minhash':
+        return MinHashTfidfDocRanker
+    if name == 'greedy':
+        return DiskGreedyMIPSTfidfDocRanker
     if name == 'sqlite':
         return DocDB
     raise RuntimeError('Invalid retriever class: %s' % name)
 
 
 from .doc_db import DocDB
-from .tfidf_doc_ranker import TfidfDocRanker
+from .tfidf_doc_ranker import *

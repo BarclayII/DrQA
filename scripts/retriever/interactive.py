@@ -24,7 +24,7 @@ parser.add_argument('--model', type=str, default=None)
 args = parser.parse_args()
 
 logger.info('Initializing ranker...')
-ranker = retriever.get_class('tfidf')(tfidf_path=args.model)
+ranker = retriever.get_class('greedy')(tfidf_path=args.model)
 
 
 # ------------------------------------------------------------------------------
@@ -32,8 +32,8 @@ ranker = retriever.get_class('tfidf')(tfidf_path=args.model)
 # ------------------------------------------------------------------------------
 
 
-def process(query, k=1):
-    doc_names, doc_scores = ranker.closest_docs(query, k)
+def process(query, k=1, approx=True):
+    doc_names, doc_scores = ranker.closest_docs(query, k, approx)
     table = prettytable.PrettyTable(
         ['Rank', 'Doc Id', 'Doc Score']
     )
@@ -52,5 +52,5 @@ Interactive TF-IDF DrQA Retriever
 def usage():
     print(banner)
 
-
+print(process('In what year did the College of Arts and Letters at Notre Dame grant its first degree?', k=5, approx=True))
 code.interact(banner=banner, local=locals())

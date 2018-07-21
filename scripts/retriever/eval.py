@@ -12,6 +12,7 @@ import argparse
 import json
 import time
 import os
+import tqdm
 
 from multiprocessing import Pool as ProcessPool
 from multiprocessing.util import Finalize
@@ -125,11 +126,11 @@ if __name__ == '__main__':
 
     # get the closest docs for each question.
     logger.info('Initializing ranker...')
-    ranker = retriever.get_class('tfidf')(tfidf_path=args.model)
+    ranker = retriever.get_class('greedy')(tfidf_path=args.model, strict=False)
 
     logger.info('Ranking...')
     closest_docs = ranker.batch_closest_docs(
-        questions, k=args.n_docs, num_workers=args.num_workers
+        questions, k=args.n_docs, num_workers=args.num_workers, approx=True
     )
     answers_docs = zip(answers, closest_docs)
 
@@ -138,16 +139,20 @@ if __name__ == '__main__':
     tok_opts = {}
     db_class = retriever.DocDB
     db_opts = {'db_path': args.doc_db}
-    processes = ProcessPool(
-        processes=args.num_workers,
-        initializer=init,
-        initargs=(tok_class, tok_opts, db_class, db_opts)
-    )
+    #processes = ProcessPool(
+    #    processes=args.num_workers,
+    #    initializer=init,
+    #    initargs=(tok_class, tok_opts, db_class, db_opts)
+    #)
+    init(tok_class, tok_opts, db_class, db_opts)
 
     # compute the scores for each pair, and print the statistics
     logger.info('Retrieving and computing scores...')
-    get_score_partial = partial(get_score, match=args.match)
-    scores = processes.map(get_score_partial, answers_docs)
+    #get_score_partial = partial(get_score, match=args.match)
+    #scores = processes.map(get_score_partial, answers_docs)
+    scores = []
+    for answer_doc in tqdm.tqdm(answers_docs):
+        scores.append(get_score(answer_doc, args.match))
 
     filename = os.path.basename(args.dataset)
     stats = (
